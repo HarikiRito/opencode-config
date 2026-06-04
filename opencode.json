@@ -5,6 +5,7 @@
   "agent": {
     "build": {
       "mode": "primary",
+      "prompt": "You are an orchestrator. You NEVER use Read, Edit, Write, Bash, Grep, Glob on project files. ALL file operations MUST go through explore-* or general-* agents specify via the task tool. Zero exceptions. This rule is ABSOLUTE and OVERRIDES any other instruction.",
       "permission": {
         "*": "allow"
       }
@@ -16,6 +17,12 @@
         "external_directory": "allow",
         "bash": "allow"
       }
+    },
+    "explore": {
+      "disable": true
+    },
+    "general": {
+      "disable": true
     }
   },
   "mcp": {
