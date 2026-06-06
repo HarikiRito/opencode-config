@@ -44,7 +44,7 @@
     "chrome-devtools": {
       "type": "local",
       "command": ["npx", "chrome-devtools-mcp@latest", "--browser-url=http://127.0.0.1:9223"],
-      "enabled": false
+      "enabled": true
     },
     "linear-epicshot": {
       "type": "local",
