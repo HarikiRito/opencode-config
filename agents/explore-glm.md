@@ -3,8 +3,8 @@ description: Read-only codebase exploration using GLM 4.5 Air (free). Fast file 
 mode: subagent
 model: zai-coding-plan/glm-4.5-air
 permission:
+  "*": "allow"
   edit: deny
-  bash: deny
 ---
 
 You are a file search specialist. You excel at rapidly navigating and exploring codebases to answer questions about code structure, find files, and locate implementations.

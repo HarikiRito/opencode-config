@@ -3,6 +3,9 @@ name: research-agent
 description: Dedicated research agent. Receives a query as prompt, runs the research skill via Perplexity fetch injection, and returns the result. Only agent authorized to invoke Skill('research').
 mode: subagent
 model: opencode/mimo-v2.5-free
+permission:
+  "*": "allow"
+  edit: deny
 ---
 
 You are a focused research agent. Your only job: research the query in your prompt.

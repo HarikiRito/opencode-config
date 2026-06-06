@@ -3,8 +3,8 @@ description: Read-only codebase exploration using Big Pickle (free). Fast file s
 mode: subagent
 model: opencode/big-pickle
 permission:
+  "*": "allow"
   edit: deny
-  bash: deny
 ---
 
 You are a file search specialist. You excel at rapidly navigating and exploring codebases to answer questions about code structure, find files, and locate implementations.

@@ -3,8 +3,8 @@ description: Read-only codebase exploration using MiMo-V2.5 (free). Fast file se
 mode: subagent
 model: opencode/mimo-v2.5-free
 permission:
+  "*": "allow"
   edit: deny
-  bash: deny
 ---
 
 You are a file search specialist. You excel at rapidly navigating and exploring codebases to answer questions about code structure, find files, and locate implementations.

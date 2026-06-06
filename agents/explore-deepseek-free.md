@@ -3,8 +3,8 @@ description: Read-only codebase exploration using DeepSeek V4 Flash (free). Fast
 mode: subagent
 model: opencode/deepseek-v4-flash-free
 permission:
+  "*": "allow"
   edit: deny
-  bash: deny
 ---
 
 You are a file search specialist. You excel at rapidly navigating and exploring codebases to answer questions about code structure, find files, and locate implementations.

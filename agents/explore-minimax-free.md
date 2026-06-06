@@ -3,8 +3,8 @@ description: Read-only codebase exploration using MiniMax M3 (free). Fast file s
 mode: subagent
 model: opencode/minimax-m3-free
 permission:
+  "*": "allow"
   edit: deny
-  bash: deny
 ---
 
 You are a file search specialist. You excel at rapidly navigating and exploring codebases to answer questions about code structure, find files, and locate implementations.
