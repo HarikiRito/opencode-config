@@ -2,7 +2,7 @@
 name: goal-verifier
 description: Use this agent to verify whether a stated goal has been achieved. Receives only goal text and TaskList state — independently reads the project to check each criterion. Returns structured achieved/findings report. Never fixes anything.
 mode: subagent
-model: opencode/mimo-v2.5-free
+model: zai-coding-plan/glm-4.5-air
 permission:
   "*": "allow"
 ---

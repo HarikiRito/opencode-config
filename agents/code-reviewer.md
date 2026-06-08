@@ -2,7 +2,7 @@
 name: code-reviewer
 description: Use this agent when code has been written or modified and needs to be reviewed for compliance with CLAUDE.md rules and coding standards. This agent should be called proactively after any significant code changes, new feature implementations, or when other agents complete coding tasks.
 mode: subagent
-model: opencode/mimo-v2.5-free
+model: zai-coding-plan/glm-4.7
 permission:
   "*": "allow"
   edit: deny
