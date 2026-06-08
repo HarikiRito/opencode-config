@@ -1,6 +1,7 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "instructions": ["~/.claude/CLAUDE.md", "AGENTS.md"],
+  "plugin": [],
   "lsp": false,
   "agent": {
     "build": {
