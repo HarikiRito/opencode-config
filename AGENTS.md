@@ -1,4 +1,4 @@
-Agents: Prefer using Minimax
+Agents: Prefer using Mimo
 ## Explore Agent Usage
 
 Always use `explore-*` agents instead of the default `explore` agent.
