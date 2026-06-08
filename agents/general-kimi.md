@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: kimi-for-coding/k2p6
+model: kimi-for-coding/k2p5
 permission:
   "*": "allow"
 ---
