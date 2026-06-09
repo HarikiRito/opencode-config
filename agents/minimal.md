@@ -1,5 +1,5 @@
 ---
-description: Minimal coding agent with full permissions. Executes prompts directly without orchestration overhead.
+description: Don't use this. This only for programmatic use only
 mode: subagent
 permission:
   "*": allow
