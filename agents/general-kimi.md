@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: kimi-for-coding/k2p5
+model: zai-coding-plan/glm-4.7
 permission:
   "*": "allow"
 ---

@@ -1,7 +1,7 @@
 ---
 description: Read-only codebase exploration using GLM 4.5 Air. Fast file search, code grep, and codebase Q&A.
 mode: subagent
-model: zai-coding-plan/glm-4.5-air
+model: opencode/mimo-v2.5-free
 permission:
   "*": "allow"
   edit: deny

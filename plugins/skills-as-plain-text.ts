@@ -9,8 +9,6 @@ import { homedir } from "node:os"
  * Registers custom skills as slash commands in the TUI,
  * but returns only "Skill: <name>" instead of expanding the full skill content.
  *
- * This is a custom replacement for opencode-skills-as-commands that avoids
- * dumping large skill markdown into the chat context.
  */
 export default (async ({ worktree }) => {
   const home = homedir()
