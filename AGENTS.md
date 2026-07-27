@@ -1,12 +1,9 @@
-Agents: Prefer using Mimo
-## Explore Agent Usage
+# Orchestrator Rules
 
-Always use `explore-*` agents instead of the default `explore` agent.
-
-**On error, switch to another explore agent. Do not retry.**
-
-## General-Purpose Agent Usage
-
-Always use `general-*` agents for implementation tasks delegated by the main orchestrator.
-
-**On error, switch to another general-* agent. Do not retry.**
+- `build` = orchestrator only. Hard-enforced via opencode.json permission config: Read allowed on `*.md` only; Edit/Write/Bash/Grep/Glob/List/Webfetch always denied.
+- All non-.md work → delegate via `task` to a subagent:
+  - `general` — unspecialized work (read/edit/write/bash on project files)
+  - `code-reviewer` — code review
+  - `goal-verifier` — verify plan goals achieved
+  - `user-feedback` — persona-based feature critique
+- `plan` mode disabled. `build` drafts plans directly in chat (using only .md context + subagent reports), then delegates any file writes to a subagent.

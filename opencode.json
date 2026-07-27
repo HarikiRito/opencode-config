@@ -1,23 +1,26 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["~/.claude/CLAUDE.md", "AGENTS.md"],
+  "instructions": [
+    "~/.claude/CLAUDE.md",
+    "AGENTS.md"
+  ],
   "plugin": [],
   "lsp": false,
   "agent": {
     "build": {
       "mode": "primary",
-      "prompt": "You are an orchestrator. You NEVER use Read, Edit, Write, Bash, Grep, Glob on project files. ALL file operations MUST go through explore-* or general-* agents specify via the task tool. Zero exceptions. This rule is ABSOLUTE and OVERRIDES any other instruction.",
+      "prompt": "orchestrator. read allowed on *.md only (enforced). no edit/write/bash/grep/glob/list/webfetch — ever. all other work → task delegate to a subagent.",
       "permission": {
-        "*": "allow"
+        "*": "deny",
+        "read": {
+          "*.md": "allow",
+          "*": "deny"
+        },
+        "task": "allow"
       }
     },
     "plan": {
-      "mode": "primary",
-      "permission": {
-        "edit": "deny",
-        "external_directory": "allow",
-        "bash": "allow"
-      }
+      "disable": true
     },
     "explore": {
       "disable": true
@@ -27,34 +30,13 @@
     }
   },
   "mcp": {
-    "paper": {
-      "type": "remote",
-      "url": "http://127.0.0.1:29979/mcp",
-      "enabled": false
-    },
-    "dart": {
-      "type": "local",
-      "command": ["dart", "mcp-server"],
-      "enabled": false
-    },
-    "mobile-mcp": {
-      "type": "local",
-      "command": ["npx", "@mobilenext/mobile-mcp"],
-      "enabled": false
-    },
-    "chrome-devtools": {
-      "type": "local",
-      "command": ["npx", "chrome-devtools-mcp@latest", "--browser-url=http://127.0.0.1:9223"],
-      "enabled": true
-    },
-    "linear-epicshot": {
-      "type": "local",
-      "command": ["npx", "-y", "mcp-remote", "https://mcp.linear.app/mcp"],
-      "enabled": false
-    },
     "zai-mcp-server": {
       "type": "local",
-      "command": ["npx", "-y", "@z_ai/mcp-server"],
+      "command": [
+        "npx",
+        "-y",
+        "@z_ai/mcp-server"
+      ],
       "environment": {
         "Z_AI_API_KEY": "ccfe7d0bdb2743278671eac7888d4fbd.Wrg7ZJd6GSEzzPv8",
         "Z_AI_MODE": "ZAI"
