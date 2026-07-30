@@ -61,7 +61,7 @@ export default (async ({ worktree }) => {
             if (name && description) {
               // Register as command but with plain text template
               commands[name] = {
-                template: `Execute skill: ${name}`,
+                template: `SKILL: ${name}`,
                 description,
               }
             }
@@ -78,7 +78,7 @@ export default (async ({ worktree }) => {
   return {
     config: async (cfg) => {
       cfg.command ??= {}
-      Object.assign(cfg.command, commands)
+      Object.assign(cfg.command)
     },
   }
 }) satisfies Plugin
