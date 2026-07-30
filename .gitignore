@@ -4,3 +4,4 @@ package-lock.json
 bun.lock
 .ai
 !open
+opencode.json.*
