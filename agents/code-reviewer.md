@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: opencode/deepseek-v4-flash-free
+model: deepseek/deepseek-v4-flash
 permission: {"*": "allow"}
 name: code-reviewer
 description: Use this agent when code has been written or modified and needs to be reviewed for compliance with CLAUDE.md rules and coding standards. This agent should be called proactively after any significant code changes, new feature implementations, or when other agents complete coding tasks.

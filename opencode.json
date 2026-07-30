@@ -1,5 +1,45 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "ai-box": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "AI Box",
+      "options": {
+        "baseURL": "https://api.ai-box.vn/v1",
+        "apiKey": "sk-HHbW8DLytkZtrz9UlHmbX3lhsXqS3mhoWZnX5PBH1dulT9He"
+      },
+      "models": {
+        "deepseek-v4-flash": {
+          "name": "DeepSeek V4 Flash",
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "deepseek-v4-flash[1m]": {
+          "name": "DeepSeek V4 Flash (1M)",
+          "limit": { "context": 1000000, "output": 8192 }
+        },
+        "deepseek-v4-pro": {
+          "name": "DeepSeek V4 Pro",
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "deepseek-v4-pro[1m]": {
+          "name": "DeepSeek V4 Pro (1M)",
+          "limit": { "context": 1000000, "output": 8192 }
+        },
+        "glm-5.2": {
+          "name": "GLM 5.2",
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "kimi-k2.7-code": {
+          "name": "Kimi K2.7 Code",
+          "limit": { "context": 128000, "output": 8192 }
+        },
+        "wan2.7-image-pro": {
+          "name": "Wan 2.7 Image Pro",
+          "limit": { "context": 128000, "output": 4096 }
+        }
+      }
+    }
+  },
   "instructions": [
     "~/.claude/CLAUDE.md",
     "AGENTS.md"
@@ -17,7 +57,9 @@
           "*": "deny"
         },
         "task": "allow"
-      }
+      },
+      "description": "The default agent. Executes tools based on configured permissions.",
+      "model": "zai-coding-plan/glm-5.2"
     },
     "plan": {
       "disable": true
@@ -26,7 +68,7 @@
       "disable": true
     },
     "general": {
-      "disable": true
+      "disable": false
     }
   },
   "mcp": {

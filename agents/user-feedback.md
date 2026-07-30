@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: opencode/deepseek-v4-flash-free
+model: deepseek/deepseek-v4-flash
 permission: {"*": "allow"}
 name: user-feedback
 description: Simulated end-user persona agent for the self-plan skill. Impersonates a hypothetical user of the product/feature under discussion, critiques the current plan, and raises feature requests or bug reports grounded in its own research. Regenerated fresh each self-plan cycle with no memory of prior personas. Read-only plus web research; can autonomously spawn research-agent, but never edits, writes, or runs commands.

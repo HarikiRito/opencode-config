@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: opencode/deepseek-v4-flash-free
+model: deepseek/deepseek-v4-flash
 permission: {"*": "allow"}
 name: research-agent
 description: Dedicated research agent. Receives a query as prompt, runs the research skill (Perplexity first, Gemini fallback), and returns the result. Only agent authorized to invoke Skill('research').

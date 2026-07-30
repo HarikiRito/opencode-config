@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: opencode/deepseek-v4-flash-free
+model: deepseek/deepseek-v4-flash
 fallback_models:
   - zai/glm-4.7
 permission: {"*": "allow"}
