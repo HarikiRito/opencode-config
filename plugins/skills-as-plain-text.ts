@@ -55,8 +55,8 @@ export default (async ({ worktree }) => {
             const nameMatch = frontmatter.match(/^name:\s*(.+)$/m)
             const descMatch = frontmatter.match(/^description:\s*(.+)$/m)
 
-            const name = nameMatch?.[1]?.trim()
-            const description = descMatch?.[1]?.trim()
+            const name = nameMatch?.[1]?.trim().replace(/^["']|["']$/g, "")
+            const description = descMatch?.[1]?.trim().replace(/^["']|["']$/g, "")
 
             if (name && description) {
               // Register as command but with plain text template

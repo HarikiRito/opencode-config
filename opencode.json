@@ -56,7 +56,11 @@
           "*.md": "allow",
           "*": "deny"
         },
-        "task": "allow"
+        "task": "allow",
+        "question": "allow",
+        "skill": "allow",
+        "webfetch": "allow",
+        "external_directory": "allow"
       },
       "description": "The default agent. Executes tools based on configured permissions.",
       "model": "zai-coding-plan/glm-5.2"
@@ -84,6 +88,15 @@
         "Z_AI_MODE": "ZAI"
       },
       "enabled": false
+    },
+    "codegraph": {
+      "type": "local",
+      "command": [
+        "codegraph",
+        "serve",
+        "--mcp"
+      ],
+      "enabled": true
     }
   }
 }
