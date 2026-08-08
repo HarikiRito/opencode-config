@@ -11,40 +11,39 @@
       "models": {
         "deepseek-v4-flash": {
           "name": "DeepSeek V4 Flash",
-          "limit": { "context": 1000000, "output": 384000 }
-        },
-        "deepseek-v4-flash[1m]": {
-          "name": "DeepSeek V4 Flash (1M)",
-          "limit": { "context": 1000000, "output": 384000 }
+          "limit": {
+            "context": 1000000,
+            "output": 384000
+          }
         },
         "deepseek-v4-pro": {
           "name": "DeepSeek V4 Pro",
-          "limit": { "context": 1000000, "output": 384000 }
-        },
-        "deepseek-v4-pro[1m]": {
-          "name": "DeepSeek V4 Pro (1M)",
-          "limit": { "context": 1000000, "output": 384000 }
+          "limit": {
+            "context": 1000000,
+            "output": 384000
+          }
         },
         "glm-5.2": {
           "name": "GLM 5.2",
-          "limit": { "context": 1000000, "output": 128000 }
+          "limit": {
+            "context": 1000000,
+            "output": 128000
+          }
         },
         "kimi-k2.7-code": {
           "name": "Kimi K2.7 Code",
-          "limit": { "context": 256000, "output": 8192 }
-        },
-        "wan2.7-image-pro": {
-          "name": "Wan 2.7 Image Pro",
-          "limit": { "context": 0, "output": 0 }
+          "limit": {
+            "context": 256000,
+            "output": 8192
+          }
         }
       }
     }
   },
-  "instructions": [
-    "~/.claude/CLAUDE.md",
-    "AGENTS.md"
+  "instructions": [],
+  "plugin": [
+    "./plugins/dictation-suffix.ts"
   ],
-  "plugin": ["./plugins/dictation-prefix.ts"],
   "lsp": false,
   "agent": {
     "build": {
@@ -53,14 +52,17 @@
       "permission": {
         "*": "deny",
         "read": {
-          "*.md": "allow",
-          "*": "deny"
+          "*": "deny",
+          "*.md": "allow"
         },
         "task": "allow",
         "question": "allow",
         "skill": "allow",
         "webfetch": "allow",
-        "external_directory": "allow"
+        "external_directory": "allow",
+        "todowrite": "allow",
+        "plan_enter": "allow",
+        "plan_exit": "allow"
       },
       "description": "The default agent. Executes tools based on configured permissions."
     },

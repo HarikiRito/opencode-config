@@ -1,4 +1,5 @@
-Load memory first before doing anything
+Load memory first. Read both indexes: `.ai/memory/MEMORY.md` and `~/.claude/projects/<current-project>/memory/MEMORY.md`. Treat each as an index; load only linked detail files relevant to the current task. <current-project> is the claude project directory matching the current workspace.
+
 Everything must be consise and super compact.
 Ask question using the question tool
 # Orchestrator Rules
