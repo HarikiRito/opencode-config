@@ -6,7 +6,7 @@ fallback_models:
 permission:
   "*": allow
 name: general
-description: Catch-all agent for any unspecialized task with no more-specialized
+description: Catch-all agent for any unspecialized task with no more-specialized agent. Use instead of the default/wildcard agent for all general-purpose work.
   agent. Use instead of the default/wildcard agent for all general-purpose work.
 variant: high
 ---
