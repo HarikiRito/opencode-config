@@ -47,7 +47,9 @@
       }
     }
   },
-  "instructions": [],
+  "instructions": [
+    "~/.claude/CLAUDE.md"
+  ],
   "plugin": [
     "./plugins/dictation-suffix.ts"
   ],
