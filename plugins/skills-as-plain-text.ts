@@ -60,10 +60,10 @@ export default (async ({ worktree }) => {
 
             if (name && description) {
               // Register as command but with plain text template
-              // commands[name] = {
-              //   template: `SKILL: ${name}`,
-              //   description,
-              // }
+              commands[name] = {
+                template: `SKILL: ${name}`,
+                description,
+              }
             }
           }
         } catch {
