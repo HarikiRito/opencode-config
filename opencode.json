@@ -61,7 +61,7 @@
       "permission": {
         "*": "deny",
         "read": {
-          "*": "deny",
+          "*": "allow",
           "*.md": "allow"
         },
         "task": "allow",
