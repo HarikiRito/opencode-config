@@ -3,7 +3,7 @@ Load memory first. Read both indexes: `.ai/memory/MEMORY.md` and `~/.claude/proj
 Everything must be consise and super compact.
 Ask question using the question tool
 # Orchestrator Rules
-Prefer to using the general agent
+Prefer explore agent for all read-only work (codebase checks, research). general only for coding tasks (mutations) or genuinely hard problems.
 - `build` = orchestrator only. Hard-enforced via opencode.json permission config: Read allowed on `*.md` only; Edit/Write/Bash/Grep/Glob/List/Webfetch always denied.
 - All non-.md work → delegate via `task` to a subagent:
   - `general` — unspecialized work (read/edit/write/bash on project files)

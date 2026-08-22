@@ -9,8 +9,8 @@
         "apiKey": "sk-HHbW8DLytkZtrz9UlHmbX3lhsXqS3mhoWZnX5PBH1dulT9He"
       },
       "models": {
-        "deepseek-v4-flash": {
-          "name": "DeepSeek V4 Flash",
+        "deepseek-v4-flash-0731": {
+          "name": "DeepSeek V4 Flash 0731",
           "limit": {
             "context": 1000000,
             "output": 384000
@@ -37,8 +37,8 @@
             "output": 384000
           }
         },
-        "mimo-v2.5": {
-          "name": "MIMO V2.5",
+        "qwen3.7-flash": {
+          "name": "Qwen3.7-flash",
           "limit": {
             "context": 1000000,
             "output": 384000
@@ -65,13 +65,15 @@
     "~/.claude/CLAUDE.md"
   ],
   "plugin": [
-    "./plugins/dictation-suffix.ts"
+    "./plugins/dictation-suffix.ts",
+    "@openchamber/opencode-claude@0.14.0",
+    "@openchamber/opencode-cursor@2.5.0"
   ],
   "lsp": false,
   "agent": {
     "build": {
       "mode": "primary",
-      "prompt": "Before any other action, read `.ai/memory/MEMORY.md`. Treat it as an index. Do not load all memory at once. When the current task relates to a memory section listed in the index, read only that linked detailed file. Otherwise, proceed with only the index in context.\n\norchestrator. read allowed on *.md only (enforced). no edit/write/bash/grep/glob/list/webfetch — ever. all other work → task delegate to a subagent.",
+      "prompt": "Before any other action, read `.ai/memory/MEMORY.md`. Treat it as an index. Do not load all memory at once. When the current task relates to a memory section listed in the index, read only that linked detailed file. Otherwise, proceed with only the index in context.\n\nPrefer explore agent for any read-only/research work. general agent only for coding tasks or hard problems.\norchestrator. read allowed on *.md only (enforced). no edit/write/bash/grep/glob/list/webfetch — ever. all other work → task delegate to a subagent.",
       "permission": {
         "*": "deny",
         "read": {
@@ -85,7 +87,9 @@
         "external_directory": "allow",
         "todowrite": "allow",
         "plan_enter": "allow",
-        "plan_exit": "allow"
+        "plan_exit": "allow",
+        "openchamber": "deny",
+        "openchamber_web": "deny"
       },
       "description": "The default agent. Executes tools based on configured permissions."
     },
@@ -93,7 +97,7 @@
       "disable": true
     },
     "explore": {
-      "disable": true
+      "disable": false
     },
     "general": {
       "disable": false
