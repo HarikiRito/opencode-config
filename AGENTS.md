@@ -10,6 +10,11 @@ Prefer explore agent for all read-only work (codebase checks, research). general
   - `code-reviewer` — code review
 - `plan` mode disabled. `build` drafts plans directly in chat (using only .md context + subagent reports), then delegates any file writes to a subagent.
 
+## Fallback (Spare Agent)
+- Subagent task fails (error/no-completion, any cause — usage-limit exhaustion looks like a generic failure, not a detectable error) → retry same agent role once (2 attempts total)
+- Both attempts fail → route that task, and all further tasks for that agent role, to `spare` for the rest of the session
+- Never retry the failing agent role again this session unless the user explicitly asks to
+
 <!-- CODEGRAPH_START -->
 ## CodeGraph
 

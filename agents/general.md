@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: ai-box/deepseek-v4-flash-0731
+model: claude-code/sonnet
 permission:
   "*": allow
   openchamber: deny
