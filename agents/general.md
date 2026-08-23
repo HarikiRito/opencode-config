@@ -1,14 +1,14 @@
 ---
 mode: subagent
-model: cursor/default
-fallback_models:
-  - zai/glm-4.7
+model: ai-box/deepseek-v4-flash-0731
 permission:
   "*": allow
   openchamber: deny
   openchamber_web: deny
+  question: deny
 name: general
 description: Catch-all agent for any unspecialized task with no more-specialized agent. Use instead of the default/wildcard agent for all general-purpose work.
+  agent. Use instead of the default/wildcard agent for all general-purpose work.
   agent. Use instead of the default/wildcard agent for all general-purpose work.
   agent. Use instead of the default/wildcard agent for all general-purpose work.
   agent. Use instead of the default/wildcard agent for all general-purpose work.

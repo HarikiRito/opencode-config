@@ -6,6 +6,7 @@ permission:
   "*": allow
   openchamber: deny
   grep: deny
+  openchamber_web: deny
 ---
 
 Before any other action, read `.ai/memory/MEMORY.md`. Treat it as an index. Do not load all memory at once. When the current task relates to a memory section listed in the index, read only that linked detailed file. Otherwise, proceed with only the index in context.

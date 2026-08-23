@@ -12,7 +12,7 @@ permission:
   bash: deny
   task: deny
   todowrite: deny
-  question: allow
+  question: deny
   external_directory: allow
   openchamber: deny
   openchamber_web: deny
