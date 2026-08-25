@@ -25,3 +25,12 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
+
+## question tool schema (question tool)
+each item in `questions[]` needs: `header` (string), `question` (string), `options[]` (array), `multiple` (bool).
+each option is an object, NOT a plain string: `{label: string, description: string}`.
+example:
+```json
+{"header": "short title", "question": "full question text", "options": [{"label": "Yes (Recommended)", "description": "why"}, {"label": "No", "description": "why"}], "multiple": false}
+```
+custom "type your own answer" is auto-added — don't add an "Other" option.
