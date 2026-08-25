@@ -30,13 +30,6 @@
             "output": 384000
           }
         },
-        "minimax-m3": {
-          "name": "Minimax M3",
-          "limit": {
-            "context": 1000000,
-            "output": 384000
-          }
-        },
         "qwen3.7-flash": {
           "name": "Qwen3.7-flash",
           "limit": {
@@ -44,8 +37,8 @@
             "output": 384000
           }
         },
-        "glm-5.2": {
-          "name": "GLM 5.2",
+        "ZHIPU/GLM-5.3": {
+          "name": "GLM 5.3 Box",
           "limit": {
             "context": 1000000,
             "output": 128000
@@ -83,7 +76,6 @@
         "task": "allow",
         "question": "allow",
         "skill": "allow",
-        "webfetch": "allow",
         "external_directory": "allow",
         "todowrite": "allow",
         "plan_enter": "allow",

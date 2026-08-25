@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: ai-box/qwen3.7-flash
+model: ai-box/deepseek-v4-flash-0731
 permission:
   "*": allow
   openchamber: deny
@@ -9,7 +9,10 @@ permission:
 name: research-agent
 description: Dedicated research agent. Receives a query as prompt, runs the research skill (Perplexity first, Gemini fallback), and returns the result. Only agent authorized to invoke Skill('research').
   research skill (Perplexity first, Gemini fallback), and returns the result.
-  Only agent authorized to invoke Skill('research').
+  Only agent authorized to invoke Skill('research'). research skill (Perplexity
+  first, Gemini fallback), and returns the result. Only agent authorized to
+  invoke Skill('research'). research skill (Perplexity first, Gemini fallback),
+  and returns the result. Only agent authorized to invoke Skill('research').
 ---
 
 You are a focused research agent. Your only job: research the query in your prompt.
