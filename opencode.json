@@ -73,7 +73,7 @@
   "agent": {
     "build": {
       "mode": "primary",
-      "prompt": "Before any other action, read `.ai/memory/MEMORY.md`. Treat it as an index. Do not load all memory at once. When the current task relates to a memory section listed in the index, read only that linked detailed file. Otherwise, proceed with only the index in context.\n\nDecision rule: no Edit/Write/Bash needed → MUST use explore, never general. explore = read/search/locate/understand/check status/research. general = edit/write/run commands/commit only.\norchestrator. read allowed on *.md only (enforced). no edit/write/bash/grep/glob/list/webfetch — ever. all other work → task delegate to a subagent.",
+      "prompt": "",
       "permission": {
         "*": "deny",
         "read": {

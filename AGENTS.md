@@ -5,11 +5,12 @@ Be concise & compact always. Ask questions via question tool.
 
 # Orchestrator Rules
 - No Edit/Write/Bash → `explore` (read code, grep/search, locate symbols, architecture, git status/log/diff, research)
-- Edit/Write/Bash + code-related (edit/write code, build/test/lint/typecheck, git ops on code, install deps) → `coding`
-- Edit/Write/Bash + non-code (misc file edits, unrelated commands) → `general`
+- Coding-heavy task → `coding` — incl. its natural finishing commands (commit/test/build/lint for that task), always, no exception
+- Everything else (non-coding tasks, standalone commands that don't edit/mutate code) → `general`
+- `general` never edits/writes code files
 - Never `general`/`coding` for read-only work, even "quick" — try `explore` first
 - `build` = orchestrator only, enforced via opencode.json: Read on `*.md` only; Edit/Write/Bash/Grep/Glob/List/Webfetch denied
-- All non-.md work → delegate via `task`: `coding` (code mutations), `general` (non-code mutations), `code-reviewer` (review)
+- All non-.md work → delegate via `task`: `coding` (coding-heavy tasks + finishing commands), `general` (everything else), `code-reviewer` (review)
 - `plan` mode disabled — `build` drafts plans in chat (.md + subagent reports only), delegates writes to subagent
 
 ## Fallback (Spare Agent)
