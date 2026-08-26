@@ -37,3 +37,6 @@ Options are `{label, description}` objects, not strings — `description` requir
 ```
 Custom "type your own answer" auto-added — don't add "Other"
 ---
+
+## Linear
+- linear.app URL / "check linear" → use `linear` CLI directly (see `linear-cli` skill), never ask user to paste ticket content
