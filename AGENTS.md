@@ -1,19 +1,21 @@
-Load memory first. Read both indexes: `.ai/memory/MEMORY.md` and `~/.claude/projects/<current-project>/memory/MEMORY.md`. Treat each as an index; load only linked detail files relevant to the current task. <current-project> is the claude project directory matching the current workspace.
+---
+Load memory first: `.ai/memory/MEMORY.md` + `~/.claude/projects/<current-project>/memory/MEMORY.md` (indexes only — load linked detail files as needed). <current-project> = claude project dir matching workspace.
 
-Everything must be consise and super compact.
-Ask question using the question tool
+Be concise & compact always. Ask questions via question tool.
+
 # Orchestrator Rules
-Prefer explore agent for all read-only work (codebase checks, research). general only for coding tasks (mutations) or genuinely hard problems.
-- `build` = orchestrator only. Hard-enforced via opencode.json permission config: Read allowed on `*.md` only; Edit/Write/Bash/Grep/Glob/List/Webfetch always denied.
-- All non-.md work → delegate via `task` to a subagent:
-  - `general` — unspecialized work (read/edit/write/bash on project files)
-  - `code-reviewer` — code review
-- `plan` mode disabled. `build` drafts plans directly in chat (using only .md context + subagent reports), then delegates any file writes to a subagent.
+- No Edit/Write/Bash → `explore` (read code, grep/search, locate symbols, architecture, git status/log/diff, research)
+- Edit/Write/Bash + code-related (edit/write code, build/test/lint/typecheck, git ops on code, install deps) → `coding`
+- Edit/Write/Bash + non-code (misc file edits, unrelated commands) → `general`
+- Never `general`/`coding` for read-only work, even "quick" — try `explore` first
+- `build` = orchestrator only, enforced via opencode.json: Read on `*.md` only; Edit/Write/Bash/Grep/Glob/List/Webfetch denied
+- All non-.md work → delegate via `task`: `coding` (code mutations), `general` (non-code mutations), `code-reviewer` (review)
+- `plan` mode disabled — `build` drafts plans in chat (.md + subagent reports only), delegates writes to subagent
 
 ## Fallback (Spare Agent)
-- Subagent task fails (error/no-completion, any cause — usage-limit exhaustion looks like a generic failure, not a detectable error) → retry same agent role once (2 attempts total)
-- Both attempts fail → route that task, and all further tasks for that agent role, to `spare` for the rest of the session
-- Never retry the failing agent role again this session unless the user explicitly asks to
+- Subagent fails (any cause, incl. undetectable usage-limit exhaustion) → retry same role once (2 total)
+- Both fail → route that + all further tasks for that role to `spare` rest of session
+- Never retry failing role again unless user explicitly asks
 
 <!-- CODEGRAPH_START -->
 ## CodeGraph
@@ -26,11 +28,11 @@ In repositories indexed by CodeGraph (a `.codegraph/` directory exists at the re
 If there is no `.codegraph/` directory, skip CodeGraph entirely — indexing is the user's decision.
 <!-- CODEGRAPH_END -->
 
-## question tool schema (question tool)
-each item in `questions[]` needs: `header` (string), `question` (string), `options[]` (array), `multiple` (bool).
-each option is an object, NOT a plain string: `{label: string, description: string}`.
-example:
+## question tool schema
+`questions[]` items: `header` (string, required), `question` (string), `options[]`, `multiple` (bool, default false)
+Options are `{label, description}` objects, not strings — `description` required (else SchemaError, most common failure); `header` required too
 ```json
 {"header": "short title", "question": "full question text", "options": [{"label": "Yes (Recommended)", "description": "why"}, {"label": "No", "description": "why"}], "multiple": false}
 ```
-custom "type your own answer" is auto-added — don't add an "Other" option.
+Custom "type your own answer" auto-added — don't add "Other"
+---
