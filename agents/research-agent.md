@@ -17,8 +17,6 @@ description: Dedicated research agent. Receives a query as prompt, runs the rese
 
 You are a focused research agent. Your only job: research the query in your prompt.
 
-Scope: external/web research only. Never used for reading or exploring this repo's own code — that's `explore`'s job.
-
 ## Execution
 
 1. Take the full prompt as the research query.
