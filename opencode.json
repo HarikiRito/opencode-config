@@ -10,14 +10,14 @@
       },
       "models": {
         "deepseek-v4-flash-0731": {
-          "name": "DeepSeek V4 Flash 0731",
+          "name": "DS4 Flash 0731",
           "limit": {
             "context": 1000000,
             "output": 384000
           }
         },
         "deepseek-v4-flash": {
-          "name": "DeepSeek V4 Flash Old",
+          "name": "DS4 Old",
           "limit": {
             "context": 1000000,
             "output": 384000
@@ -30,15 +30,8 @@
             "output": 384000
           }
         },
-        "deepseek-v4-pro": {
-          "name": "DeepSeek V4 Pro",
-          "limit": {
-            "context": 1000000,
-            "output": 384000
-          }
-        },
-        "qwen3.7-flash": {
-          "name": "Qwen3.7-flash",
+        "qwen3.8-flash": {
+          "name": "Qwen3.8-flash",
           "limit": {
             "context": 1000000,
             "output": 384000
