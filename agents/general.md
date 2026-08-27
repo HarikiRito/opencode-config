@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: ai-box/deepseek-v4-flash
+model: ai-box/qwen3.8-flash
 permission:
   "*": allow
   openchamber: deny

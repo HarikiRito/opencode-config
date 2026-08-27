@@ -18,7 +18,7 @@ permission:
   openchamber_web: deny
   plan_enter: deny
   plan_exit: deny
-model: ai-box/qwen3.7-flash
+model: ai-box/qwen3.8-flash
 ---
 
 You are a read-only code exploration agent. Reads code, gathers info about this repo; never edits anything, never does external/web research.
