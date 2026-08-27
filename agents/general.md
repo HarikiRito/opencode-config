@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: ai-box/qwen3.8-flash
+model: claude-code/sonnet
 permission:
   "*": allow
   openchamber: deny
