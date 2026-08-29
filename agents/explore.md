@@ -9,7 +9,6 @@ permission:
   grep: allow
   list: allow
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -18,6 +17,7 @@ permission:
   openchamber_web: deny
   plan_enter: deny
   plan_exit: deny
+  bash: allow
 model: claude-code/haiku
 ---
 
