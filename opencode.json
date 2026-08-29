@@ -55,7 +55,8 @@
     }
   },
   "instructions": [
-    "~/.claude/CLAUDE.md"
+    "~/.claude/CLAUDE.md",
+    "~/.config/opencode/AGENTS.md"
   ],
   "plugin": [
     "./plugins/dictation-suffix.ts",
@@ -70,7 +71,13 @@
       "permission": {
         "*": "deny",
         "read": {
-          "*.md": "allow"
+          "*.md": "allow",
+          "*.png": "allow",
+          "*.jpg": "allow",
+          "*.jpeg": "allow",
+          "*.gif": "allow",
+          "*.svg": "allow",
+          "*.webp": "allow"
         },
         "task": "allow",
         "question": "allow",
