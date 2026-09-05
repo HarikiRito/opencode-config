@@ -60,7 +60,8 @@
   ],
   "plugin": [
     "./plugins/dictation-suffix.ts",
-    "./plugins/opencode-claude/opencode-claude.js"
+    "./plugins/skills-as-plain-text.ts",
+    "@openchamber/opencode-claude"
   ],
   "lsp": false,
   "agent": {

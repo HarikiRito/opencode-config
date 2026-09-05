@@ -1,7 +1,0 @@
-node_modules/
-dist/
-*.tsbuildinfo
-.DS_Store
-
-# Local agent notes / environment-specific
-AGENTS.md
