@@ -5,3 +5,4 @@ bun.lock
 .ai
 !open
 opencode.json.*
+!plugins/**/*
