@@ -60,8 +60,7 @@
   ],
   "plugin": [
     "./plugins/dictation-suffix.ts",
-    "./plugins/opencode-claude/opencode-claude.js",
-    "@openchamber/opencode-cursor@2.5.1"
+    "./plugins/opencode-claude/opencode-claude.js"
   ],
   "lsp": false,
   "agent": {
