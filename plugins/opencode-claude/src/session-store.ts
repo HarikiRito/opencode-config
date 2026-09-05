@@ -2,6 +2,7 @@
  * Sticky foreign Claude session IDs for Agent SDK resume
  * (OpenChamber harness session-bindings pattern, scoped to this proxy).
  */
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -74,7 +75,8 @@ export function clearForeignSessionId(conversationKey: string): void {
  * Stable key from OpenAI messages so follow-ups resume the same Claude session.
  * Hashes the first user message only — including the message count made the key
  * change on every turn, which defeated resume entirely when the session header
- * is absent.
+ * is absent. Uses the full content rather than a short slice so distinct long
+ * prompts sharing a prefix don't collide.
  */
 export function conversationKeyFromMessages(
   messages: Array<{ role?: string; content?: unknown }>,
@@ -82,13 +84,10 @@ export function conversationKeyFromMessages(
   const firstUser = messages.find((m) => m.role === "user");
   const seed =
     typeof firstUser?.content === "string"
-      ? firstUser.content.slice(0, 200)
-      : JSON.stringify(firstUser?.content ?? "").slice(0, 200);
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  }
-  return `conv_${hash.toString(16)}`;
+      ? firstUser.content
+      : JSON.stringify(firstUser?.content ?? "");
+  const hash = createHash("sha1").update(seed).digest("hex").slice(0, 16);
+  return `conv_${hash}`;
 }
 
 /**

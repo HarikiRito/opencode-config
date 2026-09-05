@@ -335,6 +335,42 @@ function collectToolResults(
   return results;
 }
 
+/**
+ * A parked turn is abandoned only if the transcript shows opencode dropped
+ * it: the last assistant message carrying any of the pending ids is followed
+ * by a NEW user message with no tool reply for them. A bare retry re-sends
+ * the identical transcript (no new trailing user message) and must still
+ * take the re-emit path, not this one.
+ */
+function parkedTurnWasAbandoned(
+  messages: OpenAIMessage[],
+  pendingIds: Set<string>,
+): boolean {
+  let lastAssistantIdx = -1;
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    if (msg.role !== "assistant" || !Array.isArray(msg.tool_calls)) continue;
+    const hasPending = msg.tool_calls.some(
+      (call) => call && typeof call.id === "string" && pendingIds.has(call.id),
+    );
+    if (hasPending) lastAssistantIdx = i;
+  }
+  if (lastAssistantIdx === -1) return false;
+  let sawNewUserMessage = false;
+  for (let i = lastAssistantIdx + 1; i < messages.length; i++) {
+    const msg = messages[i];
+    if (
+      msg.role === "tool" &&
+      typeof msg.tool_call_id === "string" &&
+      pendingIds.has(msg.tool_call_id)
+    ) {
+      return false;
+    }
+    if (msg.role === "user") sawNewUserMessage = true;
+  }
+  return sawNewUserMessage;
+}
+
 function selectionFromRequest(
   req: Request,
   body: ChatCompletionRequest,
@@ -355,6 +391,7 @@ async function handleChatCompletions(
   const messages = Array.isArray(body.messages) ? body.messages : [];
   const metaKind = detectMetaRequestKind(messages);
   const sessionHeader = req.headers.get(SESSION_HEADER);
+  const keyIsAuthoritative = Boolean(sessionHeader);
   const conversationKey =
     requestKeyNamespace(metaKind) +
     (sessionHeader || conversationKeyFromMessages(messages));
@@ -364,9 +401,12 @@ async function handleChatCompletions(
 
   // Resume a parked bridge if OpenCode returned tool results.
   const toolResults = collectToolResults(messages);
-  let existing = findBridgeByConversation(conversationKey);
-  // Fallback: match by tool_call_id when the session header is missing/changed.
-  if ((!existing || existing.pendingTools.size === 0) && toolResults.size > 0) {
+  // Tool ids route to their owning bridge directly. Required once two
+  // bridges can coexist under one non-authoritative key (see putBridge) —
+  // a key-first lookup would pick whichever bridge claimed the key first,
+  // even when the tool result belongs to its sibling.
+  let existing: ParkedBridge | undefined;
+  if (toolResults.size > 0) {
     for (const toolCallId of toolResults.keys()) {
       const byTool = findBridgeByPendingTool(toolCallId);
       if (byTool) {
@@ -375,6 +415,7 @@ async function handleChatCompletions(
       }
     }
   }
+  if (!existing) existing = findBridgeByConversation(conversationKey);
   if (existing && existing.pendingTools.size > 0) {
     let resolved = 0;
     for (const [toolId, tool] of existing.pendingTools) {
@@ -396,31 +437,48 @@ async function handleChatCompletions(
             body.model || model,
             existing,
           )
-        : collectTurnResponse(
-            existing.continueStream(),
-            body.model || model,
-            existing,
-          );
+        : collectTurnResponse(existing.continueStream(), body.model || model, existing, {
+            signal: req.signal,
+          });
     }
     // Still parked — do not start a parallel Claude turn (OpenCode may retry
     // or send a follow-up before tool results arrive). Re-emit pending calls.
     // Also covers partial tool results (resolved > 0 but others still pending).
     if (existing.pendingTools.size > 0) {
-      log.info("[opencode-claude] re-emitting parked tool_calls", {
-        conversationKey: existing.conversationKey,
-        pending: existing.pendingTools.size,
-        resolved,
-      });
-      // Snapshot now, not inside the generator — the generator body only
-      // runs once the response starts streaming, and a concurrent resume
-      // request can fully drain existing.pendingTools before then.
-      const parkedTools = [...existing.pendingTools.values()];
-      const parkedEvents = (async function* () {
-        yield { type: "__park__", tools: parkedTools };
-      })();
-      return stream
-        ? streamOpenAIResponse(parkedEvents, body.model || model, existing)
-        : collectTurnResponse(parkedEvents, body.model || model, existing);
+      const abandoned =
+        resolved === 0 &&
+        parkedTurnWasAbandoned(messages, new Set(existing.pendingTools.keys()));
+      if (abandoned) {
+        // opencode already received these tool_calls (they're in an assistant
+        // message) but sent no tool results — this is an abandoned turn (user
+        // abort / new message), not a lost response. Re-emitting would fire
+        // the same tool call twice, so discard the stale bridge instead.
+        log.info("[opencode-claude] discarding abandoned parked turn", {
+          conversationKey: existing.conversationKey,
+          pending: existing.pendingTools.size,
+        });
+        deleteBridge(existing.id);
+        existing = undefined;
+      } else {
+        log.info("[opencode-claude] re-emitting parked tool_calls", {
+          conversationKey: existing.conversationKey,
+          pending: existing.pendingTools.size,
+          resolved,
+        });
+        // Snapshot now, not inside the generator — the generator body only
+        // runs once the response starts streaming, and a concurrent resume
+        // request can fully drain existing.pendingTools before then.
+        const parkedTools = [...existing.pendingTools.values()];
+        const parkedEvents = (async function* () {
+          yield { type: "__park__", tools: parkedTools };
+        })();
+        // No signal here: this response is a synthetic echo of the parked
+        // tool_calls, not the channel for the turn's real result — aborting
+        // this poll must not tear down a bridge still legitimately in flight.
+        return stream
+          ? streamOpenAIResponse(parkedEvents, body.model || model, existing)
+          : collectTurnResponse(parkedEvents, body.model || model, existing);
+      }
     }
   }
 
@@ -694,7 +752,7 @@ async function handleChatCompletions(
     seenAssistantUsageIds: new Set(),
     createdAt: Date.now(),
   };
-  putBridge(bridge);
+  putBridge(bridge, keyIsAuthoritative);
 
   async function* consumeStream(): AsyncGenerator<unknown, void, unknown> {
     const iterator = handle!.stream[Symbol.asyncIterator]();
@@ -801,6 +859,11 @@ async function handleChatCompletions(
         if (pendingTools.size > 0 && isMessageStreamEnd(event)) notifyPark();
         yield event;
       }
+    } catch (err) {
+      // Stall watchdog / stream error: tear the bridge down even though
+      // parked — otherwise its pendingTools stay unresolved forever.
+      deleteBridge(bridgeId);
+      throw err;
     } finally {
       if (!parked) {
         handle?.close();
@@ -827,7 +890,9 @@ async function handleChatCompletions(
     }
     return streamOpenAIResponse(probe.replay, body.model || model, bridge);
   }
-  return collectTurnResponse(consumeStream(), body.model || model, bridge);
+  return collectTurnResponse(consumeStream(), body.model || model, bridge, {
+    signal: req.signal,
+  });
 }
 
 
@@ -1378,8 +1443,9 @@ async function collectTurnResponse(
   events: AsyncIterable<unknown>,
   model: string,
   bridge: ParkedBridge,
-  options?: { suppressReasoning?: boolean },
+  options?: { signal?: AbortSignal; suppressReasoning?: boolean },
 ): Promise<Response> {
+  const signal = options?.signal;
   const suppressReasoning = options?.suppressReasoning === true;
   const completionId = `chatcmpl_${createHash("sha1")
     .update(bridge.id)
@@ -1404,80 +1470,92 @@ async function collectTurnResponse(
     content += `\n\n[claude-code error] ${text}`;
   };
 
+  // The buffered path has no ReadableStream.cancel() hook, so a client that
+  // aborts mid-turn would otherwise leak a parked bridge forever.
+  const onAbort = () => deleteBridge(bridge.id);
+  if (signal) {
+    if (signal.aborted) onAbort();
+    else signal.addEventListener("abort", onAbort);
+  }
+
   try {
-    for await (const event of events) {
-      const mapped = mapSdkEvent(event);
-      if (mapped.kind === "park") {
-        toolCalls.push(...mapped.tools);
-        sawContent = true;
-      } else if (mapped.kind === "text") {
-        if (mapped.text) sawContent = true;
-        content += mapped.text;
-      } else if (mapped.kind === "reasoning") {
-        if (!suppressReasoning) reasoning += mapped.text;
-      } else if (mapped.kind === "usage-delta") {
-        turnUsage = addUniqueAssistantUsage(
-          turnUsage,
-          mapped.usage,
-          mapped.messageId,
-          bridge.seenAssistantUsageIds,
-        );
-      } else if (mapped.kind === "usage") {
-        resultUsage = mapped.usage;
-      } else if (mapped.kind === "error") {
-        // SDK emits the failure twice (result event + iterator throw) —
-        // keep one copy, and keep any usage that came with it.
-        if (mapped.usage) resultUsage = mapped.usage;
-        forgetDeadSession(bridge.conversationKey, mapped.text);
-        noteError(mapped.text);
+    try {
+      for await (const event of events) {
+        const mapped = mapSdkEvent(event);
+        if (mapped.kind === "park") {
+          toolCalls.push(...mapped.tools);
+          sawContent = true;
+        } else if (mapped.kind === "text") {
+          if (mapped.text) sawContent = true;
+          content += mapped.text;
+        } else if (mapped.kind === "reasoning") {
+          if (!suppressReasoning) reasoning += mapped.text;
+        } else if (mapped.kind === "usage-delta") {
+          turnUsage = addUniqueAssistantUsage(
+            turnUsage,
+            mapped.usage,
+            mapped.messageId,
+            bridge.seenAssistantUsageIds,
+          );
+        } else if (mapped.kind === "usage") {
+          resultUsage = mapped.usage;
+        } else if (mapped.kind === "error") {
+          // SDK emits the failure twice (result event + iterator throw) —
+          // keep one copy, and keep any usage that came with it.
+          if (mapped.usage) resultUsage = mapped.usage;
+          forgetDeadSession(bridge.conversationKey, mapped.text);
+          noteError(mapped.text);
+        }
       }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      recordRateLimitErrorText(message);
+      forgetDeadSession(bridge.conversationKey, message);
+      noteError(message);
     }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    recordRateLimitErrorText(message);
-    forgetDeadSession(bridge.conversationKey, message);
-    noteError(message);
-  }
 
-  const usage = resolveTurnUsage(turnUsage, resultUsage);
+    const usage = resolveTurnUsage(turnUsage, resultUsage);
 
-  // Buffered responses have not committed HTTP headers yet. Even if an agent
-  // produced partial work first, preserve the real 429 so OpenCode starts its
-  // retry countdown instead of treating the run as a successful answer.
-  if (
-    errorText &&
-    (!sawContent || classifyClaudeFailure(errorText) === "rate_limit")
-  ) {
-    return failureResponse(errorText, bridge.conversationKey);
-  }
+    // Buffered responses have not committed HTTP headers yet. Even if an agent
+    // produced partial work first, preserve the real 429 so OpenCode starts its
+    // retry countdown instead of treating the run as a successful answer.
+    if (
+      errorText &&
+      (!sawContent || classifyClaudeFailure(errorText) === "rate_limit")
+    ) {
+      return failureResponse(errorText, bridge.conversationKey);
+    }
 
-  return Response.json({
-    id: completionId,
-    object: "chat.completion",
-    created,
-    model,
-    choices: [
-      {
-        index: 0,
-        message: {
-          role: "assistant",
-          content,
-          ...(reasoning ? { reasoning_content: reasoning } : {}),
-          ...(toolCalls.length
-            ? {
-                tool_calls: toolCalls.map((t) => ({
-                  id: t.id,
-                  type: "function",
-                  function: { name: t.name, arguments: t.arguments },
-                })),
-              }
-            : {}),
+    return Response.json({
+      id: completionId,
+      object: "chat.completion",
+      created,
+      model,
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content,
+            ...(reasoning ? { reasoning_content: reasoning } : {}),
+            ...(toolCalls.length
+              ? {
+                  tool_calls: toolCalls.map((t) => ({
+                    id: t.id,
+                    type: "function",
+                    function: { name: t.name, arguments: t.arguments },
+                  })),
+                }
+              : {}),
+          },
+          finish_reason: toolCalls.length ? "tool_calls" : "stop",
         },
-        finish_reason: toolCalls.length ? "tool_calls" : "stop",
-      },
-    ],
-    ...(usage ? { usage } : {}),
-  });
+      ],
+      ...(usage ? { usage } : {}),
+    });
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+  }
 }
 
 /**

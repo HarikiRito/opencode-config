@@ -26,21 +26,43 @@ export type ParkedBridge = {
 
 const bridges = new Map<string, ParkedBridge>();
 
-export function putBridge(bridge: ParkedBridge): void {
-  // One active bridge per conversation — drop any prior turn for this key.
+/**
+ * How long a coexisting non-authoritative bridge may sit unresolved before
+ * it's reaped. Not imported from proxy.ts's turnStallMs (would cycle back
+ * into this module) — kept as a plain constant of the same order (10m).
+ */
+export const BRIDGE_MAX_AGE_MS = 600_000;
+
+/**
+ * One active bridge per conversation — drop any prior turn for this key,
+ * unless the key came from a content hash (no session header) AND the prior
+ * bridge still has unresolved tools AND it's still within BRIDGE_MAX_AGE_MS:
+ * two distinct sessions can collide on that hash, and evicting a live one
+ * would strand its pending tool results (which still route correctly by id
+ * via findBridgeByPendingTool). Past the TTL its tools are presumed dead
+ * (owning session gone) so it's reaped like any other stale bridge.
+ */
+export function putBridge(
+  bridge: ParkedBridge,
+  keyIsAuthoritative: boolean,
+): void {
+  const now = Date.now();
   for (const [id, existing] of bridges) {
-    if (existing.conversationKey === bridge.conversationKey && id !== bridge.id) {
-      for (const tool of existing.pendingTools.values()) {
-        tool.reject(new Error("Superseded by a newer turn"));
-      }
-      existing.pendingTools.clear();
-      try {
-        existing.handle.close();
-      } catch {
-        // ignore
-      }
-      bridges.delete(id);
+    if (existing.conversationKey !== bridge.conversationKey || id === bridge.id) {
+      continue;
     }
+    const withinTtl = now - existing.createdAt <= BRIDGE_MAX_AGE_MS;
+    if (!keyIsAuthoritative && existing.pendingTools.size > 0 && withinTtl) continue;
+    for (const tool of existing.pendingTools.values()) {
+      tool.reject(new Error("Superseded by a newer turn"));
+    }
+    existing.pendingTools.clear();
+    try {
+      existing.handle.close();
+    } catch {
+      // ignore
+    }
+    bridges.delete(id);
   }
   bridges.set(bridge.id, bridge);
 }

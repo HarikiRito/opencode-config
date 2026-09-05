@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 
+
 async function main() {
   const { buildClaudeCodeChildEnv } = await import("../src/auth-env.ts");
   const {
@@ -1856,6 +1857,676 @@ async function main() {
       resetClaudeCliResolutionCache();
     } finally {
       rmSync(binDir, { recursive: true, force: true });
+    }
+  }
+
+  // ---- Parked-turn re-emit vs. abandoned-turn discard ----
+  {
+    const { setClaudeQueryStarter } = await import("../src/proxy.ts");
+    const { findBridgeByConversation, deleteBridge } = await import(
+      "../src/bridge-pool.ts"
+    );
+
+    // A promise's reject() is fine to call with nobody awaiting it — but an
+    // unconsumed REJECTION prints as an unhandled rejection. None of these
+    // mock turns wire a real MCP tool caller to consume toolResultPromises,
+    // so swallow deliberately-triggered rejects before provoking them.
+    const swallowReject = (
+      bridge: { pendingTools: Map<string, { reject: (e: Error) => void }> } | undefined,
+      id: string,
+    ) => {
+      const call = bridge?.pendingTools.get(id);
+      if (call) call.reject = () => {};
+    };
+
+    const postChat = (session: string, messages: unknown[]) =>
+      fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-opencode-claude-session": session,
+        },
+        body: JSON.stringify({ model: "sonnet", stream: false, messages }),
+      });
+
+    const parkingStream = (toolId: string) =>
+      (async function* () {
+        yield {
+          type: "assistant",
+          message: {
+            content: [
+              { type: "tool_use", id: toolId, name: "mcp__opencode__bash", input: {} },
+            ],
+          },
+        };
+        yield { type: "stream_event", event: { type: "message_delta" } };
+      })();
+
+    try {
+      // (a) Lost response: opencode retries with the exact same messages (no
+      // assistant tool_calls, no tool result) — must re-emit, bridge stays.
+      setClaudeQueryStarter(async () => ({
+        stream: parkingStream("call_lost"),
+        interrupt: async () => {},
+        close: () => {},
+        getPid: () => null,
+      }));
+      const baseMessages = [{ role: "user", content: "run ls please" }];
+      const res1 = await postChat("smoke-reemit-lost", baseMessages);
+      assert.equal(res1.status, 200);
+      const json1 = (await res1.json()) as {
+        choices?: Array<{
+          message?: { tool_calls?: Array<{ id: string }> };
+          finish_reason?: string;
+        }>;
+      };
+      assert.equal(json1.choices?.[0]?.message?.tool_calls?.[0]?.id, "call_lost");
+      assert.equal(json1.choices?.[0]?.finish_reason, "tool_calls");
+
+      const res2 = await postChat("smoke-reemit-lost", baseMessages);
+      assert.equal(res2.status, 200);
+      const json2 = (await res2.json()) as {
+        choices?: Array<{
+          message?: { tool_calls?: Array<{ id: string }> };
+          finish_reason?: string;
+        }>;
+      };
+      assert.equal(
+        json2.choices?.[0]?.message?.tool_calls?.[0]?.id,
+        "call_lost",
+        "lost-response retry must re-emit the same pending tool_call",
+      );
+      assert.equal(json2.choices?.[0]?.finish_reason, "tool_calls");
+      const stillParked = findBridgeByConversation("smoke-reemit-lost");
+      assert.ok(stillParked, "bridge must stay parked for a genuine lost-response retry");
+      swallowReject(stillParked, "call_lost");
+      deleteBridge(stillParked!.id);
+
+      // (a2) Partial resolution: a live turn parked on TWO tools; opencode
+      // resolves one and re-sends its own transcript (which now echoes both
+      // tool_calls) with no new user message. The still-pending tool was
+      // "emitted in that assistant message" too, just like the resolved one
+      // — the discriminator must not mistake that for abandonment.
+      const parkingStreamTwo = (idA: string, idB: string) =>
+        (async function* () {
+          yield {
+            type: "assistant",
+            message: {
+              content: [
+                { type: "tool_use", id: idA, name: "mcp__opencode__bash", input: {} },
+                { type: "tool_use", id: idB, name: "mcp__opencode__bash", input: {} },
+              ],
+            },
+          };
+          yield { type: "stream_event", event: { type: "message_delta" } };
+        })();
+      setClaudeQueryStarter(async () => ({
+        stream: parkingStreamTwo("call_partial_a", "call_partial_b"),
+        interrupt: async () => {},
+        close: () => {},
+        getPid: () => null,
+      }));
+      const partialBaseMessages = [{ role: "user", content: "run two things" }];
+      const resPartial1 = await postChat("smoke-partial", partialBaseMessages);
+      assert.equal(resPartial1.status, 200);
+      const jsonPartial1 = (await resPartial1.json()) as {
+        choices?: Array<{ message?: { tool_calls?: Array<{ id: string }> } }>;
+      };
+      assert.deepEqual(
+        jsonPartial1.choices?.[0]?.message?.tool_calls?.map((t) => t.id).sort(),
+        ["call_partial_a", "call_partial_b"],
+      );
+
+      const messagesWithOneResolved = [
+        ...partialBaseMessages,
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [
+            { id: "call_partial_a", type: "function", function: { name: "bash", arguments: "{}" } },
+            { id: "call_partial_b", type: "function", function: { name: "bash", arguments: "{}" } },
+          ],
+        },
+        { role: "tool", tool_call_id: "call_partial_a", content: "result A" },
+      ];
+      const resPartial2 = await postChat("smoke-partial", messagesWithOneResolved);
+      assert.equal(resPartial2.status, 200);
+      const jsonPartial2 = (await resPartial2.json()) as {
+        choices?: Array<{
+          message?: { tool_calls?: Array<{ id: string }> };
+          finish_reason?: string;
+        }>;
+      };
+      assert.equal(
+        jsonPartial2.choices?.[0]?.message?.tool_calls?.[0]?.id,
+        "call_partial_b",
+        "partial resolution must re-emit only the still-pending tool_call",
+      );
+      assert.equal(jsonPartial2.choices?.[0]?.finish_reason, "tool_calls");
+      const partialBridge = findBridgeByConversation("smoke-partial");
+      assert.ok(partialBridge, "bridge must survive a partial resolution, not be discarded as abandoned");
+      assert.equal(partialBridge?.pendingTools.size, 1);
+      assert.ok(partialBridge?.pendingTools.has("call_partial_b"));
+      swallowReject(partialBridge, "call_partial_b");
+      deleteBridge(partialBridge!.id);
+
+      // (b) Abandoned turn: opencode's own transcript now carries the
+      // tool_calls (it received the response) but sent no tool result —
+      // a new user turn/abort must start fresh, not replay the stale call.
+      setClaudeQueryStarter(async () => ({
+        stream: parkingStream("call_abandon_1"),
+        interrupt: async () => {},
+        close: () => {},
+        getPid: () => null,
+      }));
+      const res3 = await postChat("smoke-abandon", baseMessages);
+      assert.equal(res3.status, 200);
+      await res3.json();
+      const parkedAbandon = findBridgeByConversation("smoke-abandon");
+      assert.equal(parkedAbandon?.pendingTools.size, 1);
+      swallowReject(parkedAbandon, "call_abandon_1");
+
+      let secondTurnCalled = false;
+      setClaudeQueryStarter(async () => {
+        secondTurnCalled = true;
+        return {
+          stream: (async function* () {
+            yield {
+              type: "stream_event",
+              event: {
+                type: "content_block_delta",
+                delta: { type: "text_delta", text: "FRESH_TURN_OK" },
+              },
+            };
+            yield { type: "result", is_error: false, usage: {} };
+          })(),
+          interrupt: async () => {},
+          close: () => {},
+          getPid: () => null,
+        };
+      });
+      const messagesWithStaleAssistant = [
+        ...baseMessages,
+        {
+          role: "assistant",
+          content: "",
+          tool_calls: [
+            {
+              id: "call_abandon_1",
+              type: "function",
+              function: { name: "bash", arguments: "{}" },
+            },
+          ],
+        },
+        { role: "user", content: "actually never mind, do something else" },
+      ];
+      const res4 = await postChat("smoke-abandon", messagesWithStaleAssistant);
+      assert.equal(res4.status, 200);
+      const json4 = (await res4.json()) as {
+        choices?: Array<{
+          message?: { content?: string };
+          finish_reason?: string;
+        }>;
+      };
+      assert.ok(secondTurnCalled, "abandoned turn must start a fresh Agent SDK turn");
+      assert.match(String(json4.choices?.[0]?.message?.content ?? ""), /FRESH_TURN_OK/);
+      assert.equal(
+        json4.choices?.[0]?.finish_reason,
+        "stop",
+        "fresh turn must not replay the stale tool_call",
+      );
+      assert.equal(
+        findBridgeByConversation("smoke-abandon")?.pendingTools.size ?? 0,
+        0,
+        "fresh turn must not leave a dangling pending tool",
+      );
+    } finally {
+      setClaudeQueryStarter(null);
+    }
+  }
+
+  // ---- Buffered (non-streaming) client abort tears down the bridge ----
+  {
+    const { setClaudeQueryStarter } = await import("../src/proxy.ts");
+    const { findBridgeByConversation } = await import("../src/bridge-pool.ts");
+    const prevStallEnv = process.env.OPENCODE_CLAUDE_TURN_STALL_MS;
+    process.env.OPENCODE_CLAUDE_TURN_STALL_MS = "60000";
+    try {
+      let bufferedCloseCalled = false;
+      setClaudeQueryStarter(async () => ({
+        stream: (async function* () {
+          yield { type: "system", subtype: "init", session_id: "buffered-abort-sess" };
+          await new Promise(() => {}); // turn continues forever
+        })(),
+        interrupt: async () => {},
+        close: () => {
+          bufferedCloseCalled = true;
+        },
+        getPid: () => null,
+      }));
+      const abort = new AbortController();
+      const bufferedPromise = fetch(
+        `http://127.0.0.1:${port}/v1/chat/completions`,
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-opencode-claude-session": "smoke-buffered-cancel",
+          },
+          body: JSON.stringify({
+            model: "sonnet",
+            stream: false,
+            messages: [{ role: "user", content: "hi" }],
+          }),
+          signal: abort.signal,
+        },
+      );
+      bufferedPromise.catch(() => {});
+
+      const parkDeadline = Date.now() + 5_000;
+      while (
+        !findBridgeByConversation("smoke-buffered-cancel") &&
+        Date.now() < parkDeadline
+      ) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      assert.ok(
+        findBridgeByConversation("smoke-buffered-cancel"),
+        "buffered turn must register a bridge before abort",
+      );
+
+      abort.abort();
+      const closeDeadline = Date.now() + 5_000;
+      while (!bufferedCloseCalled && Date.now() < closeDeadline) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      assert.ok(
+        bufferedCloseCalled,
+        "aborted buffered turn must close the orphaned CLI handle",
+      );
+
+      const teardownDeadline = Date.now() + 5_000;
+      while (
+        findBridgeByConversation("smoke-buffered-cancel") &&
+        Date.now() < teardownDeadline
+      ) {
+        await new Promise((r) => setTimeout(r, 20));
+      }
+      assert.equal(
+        findBridgeByConversation("smoke-buffered-cancel"),
+        undefined,
+        "aborted buffered turn must not leak a parked bridge",
+      );
+    } finally {
+      setClaudeQueryStarter(null);
+      if (prevStallEnv === undefined) {
+        delete process.env.OPENCODE_CLAUDE_TURN_STALL_MS;
+      } else {
+        process.env.OPENCODE_CLAUDE_TURN_STALL_MS = prevStallEnv;
+      }
+    }
+  }
+
+  // ---- Aborting a re-emit-branch poll must not tear down a live bridge (FIX 1) ----
+  {
+    const { setClaudeQueryStarter } = await import("../src/proxy.ts");
+    const { findBridgeByConversation, deleteBridge } = await import(
+      "../src/bridge-pool.ts"
+    );
+    const postChat = (
+      session: string,
+      messages: unknown[],
+      signal?: AbortSignal,
+    ) =>
+      fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-opencode-claude-session": session,
+        },
+        body: JSON.stringify({ model: "sonnet", stream: false, messages }),
+        signal,
+      });
+    try {
+      setClaudeQueryStarter(async () => ({
+        stream: (async function* () {
+          yield {
+            type: "assistant",
+            message: {
+              content: [
+                {
+                  type: "tool_use",
+                  id: "call_reemit_abort",
+                  name: "mcp__opencode__bash",
+                  input: {},
+                },
+              ],
+            },
+          };
+          yield { type: "stream_event", event: { type: "message_delta" } };
+        })(),
+        interrupt: async () => {},
+        close: () => {},
+        getPid: () => null,
+      }));
+
+      const baseMessages = [{ role: "user", content: "re-emit abort probe" }];
+      const res1 = await postChat("smoke-reemit-abort", baseMessages);
+      assert.equal(res1.status, 200);
+      const json1 = (await res1.json()) as {
+        choices?: Array<{ message?: { tool_calls?: Array<{ id: string }> } }>;
+      };
+      assert.equal(
+        json1.choices?.[0]?.message?.tool_calls?.[0]?.id,
+        "call_reemit_abort",
+      );
+      const bridgeBefore = findBridgeByConversation("smoke-reemit-abort");
+      assert.ok(bridgeBefore, "bridge must be parked after the initial turn");
+
+      // Same transcript again (lost-response retry) hits the re-emit branch.
+      // Abort synchronously, before the server even processes the request,
+      // so a regression (re-adding `{ signal: req.signal }` there) would
+      // deterministically fire onAbort and delete the bridge.
+      const abort = new AbortController();
+      const res2Promise = postChat(
+        "smoke-reemit-abort",
+        baseMessages,
+        abort.signal,
+      );
+      res2Promise.catch(() => {});
+      abort.abort();
+      await res2Promise.catch(() => {});
+
+      const bridgeAfter = findBridgeByConversation("smoke-reemit-abort");
+      assert.ok(
+        bridgeAfter,
+        "aborting a re-emit poll must not tear down the bridge",
+      );
+      assert.equal(bridgeAfter?.id, bridgeBefore?.id);
+      assert.equal(bridgeAfter?.pendingTools.size, 1);
+      assert.ok(
+        bridgeAfter?.pendingTools.has("call_reemit_abort"),
+        "pending tool must survive the aborted re-emit poll",
+      );
+      const call = bridgeAfter?.pendingTools.get("call_reemit_abort");
+      if (call) call.reject = () => {};
+      deleteBridge(bridgeAfter!.id);
+    } finally {
+      setClaudeQueryStarter(null);
+    }
+  }
+  // Let Bun finish tearing down the aborted socket above: it settles the
+  // route handler's own promise asynchronously, and doing so mid-next-test
+  // surfaces as a spurious unhandled rejection unrelated to either test.
+  await new Promise((r) => setTimeout(r, 300));
+
+  // ---- Turn failure (stream error) rejects pending tools + drops the bridge ----
+  {
+    const { setClaudeQueryStarter } = await import("../src/proxy.ts");
+    const { findBridgeByConversation } = await import("../src/bridge-pool.ts");
+    try {
+      setClaudeQueryStarter(async () => ({
+        // Must genuinely park (tool_use, then later a message-stream-end)
+        // before throwing, or the pre-existing `finally { if (!parked) ... }`
+        // fallback masks the new catch. The throw must follow the park event
+        // with no further await: once parked, the loop's own park-vs-next
+        // race always resolves "park" first for anything but a throw that's
+        // already synchronously settled on the very next iterator.next().
+        stream: (async function* () {
+          yield {
+            type: "assistant",
+            message: {
+              content: [
+                { type: "tool_use", id: "fail_tool", name: "mcp__opencode__bash", input: {} },
+              ],
+            },
+          };
+          // Give the test time to grab + patch the pending tool call before
+          // the turn actually dies (both happen in the same microtask chain
+          // otherwise, racing the assertion below).
+          await new Promise((r) => setTimeout(r, 50));
+          yield { type: "stream_event", event: { type: "message_delta" } };
+          throw new Error("stream exploded");
+        })(),
+        interrupt: async () => {},
+        close: () => {},
+        getPid: () => null,
+      }));
+
+      const respPromise = fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-opencode-claude-session": "smoke-stream-error",
+        },
+        body: JSON.stringify({
+          model: "sonnet",
+          stream: false,
+          messages: [{ role: "user", content: "hi" }],
+        }),
+      });
+
+      let rejectedWith: string | null = null;
+      const patchDeadline = Date.now() + 5_000;
+      while (Date.now() < patchDeadline) {
+        const bridge = findBridgeByConversation("smoke-stream-error");
+        const call = bridge?.pendingTools.get("fail_tool");
+        if (call) {
+          call.reject = (err: Error) => {
+            rejectedWith = err.message;
+          };
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 5));
+      }
+
+      const res = await respPromise;
+      await res.text();
+      assert.equal(
+        rejectedWith,
+        "Bridge closed",
+        "a stream error must reject any pending tool call",
+      );
+      assert.equal(
+        findBridgeByConversation("smoke-stream-error"),
+        undefined,
+        "a stream error must not leave the bridge parked",
+      );
+    } finally {
+      setClaudeQueryStarter(null);
+    }
+  }
+
+  // ---- putBridge key-collision policy: non-authoritative keys coexist,
+  // authoritative (real session header) keys still evict ----
+  {
+    const { putBridge, findBridgeByPendingTool, getBridge, deleteBridge } =
+      await import("../src/bridge-pool.ts");
+
+    const fakeHandle = () => ({
+      stream: (async function* () {})(),
+      interrupt: async () => {},
+      close: () => {},
+      getPid: () => null,
+    });
+    const makeBridge = (id: string, conversationKey: string, toolId: string) => ({
+      id,
+      conversationKey,
+      handle: fakeHandle(),
+      pendingTools: new Map([
+        [
+          toolId,
+          {
+            id: toolId,
+            name: "bash",
+            arguments: "{}",
+            resolve: () => {},
+            reject: () => {},
+          },
+        ],
+      ]),
+      seenAssistantUsageIds: new Set<string>(),
+      createdAt: Date.now(),
+    });
+
+    const collideKey = "conv_collision_smoke_key";
+    const bridge1 = makeBridge("smoke-bridge-1-collide", collideKey, "tool_a");
+    const bridge2 = makeBridge("smoke-bridge-2-collide", collideKey, "tool_b");
+    try {
+      // Two distinct sessions can legitimately hash-collide on a content key
+      // when the session header is absent — neither must evict the other's
+      // still-unresolved turn.
+      putBridge(bridge1 as never, false);
+      putBridge(bridge2 as never, false);
+      assert.ok(getBridge("smoke-bridge-1-collide"), "bridge1 must survive the collision");
+      assert.ok(getBridge("smoke-bridge-2-collide"), "bridge2 must survive the collision");
+      assert.equal(findBridgeByPendingTool("tool_a")?.id, "smoke-bridge-1-collide");
+      assert.equal(findBridgeByPendingTool("tool_b")?.id, "smoke-bridge-2-collide");
+
+      // A real session header IS authoritative: it must still terminate any
+      // prior turn(s) parked under that exact key, collision or not.
+      let bridge1Rejected: string | null = null;
+      let bridge2Rejected: string | null = null;
+      bridge1.pendingTools.get("tool_a")!.reject = (err: Error) => {
+        bridge1Rejected = err.message;
+      };
+      bridge2.pendingTools.get("tool_b")!.reject = (err: Error) => {
+        bridge2Rejected = err.message;
+      };
+      const bridge3 = makeBridge("smoke-bridge-3-authoritative", collideKey, "tool_c");
+      putBridge(bridge3 as never, true);
+      assert.equal(getBridge("smoke-bridge-1-collide"), undefined, "authoritative key must evict bridge1");
+      assert.equal(getBridge("smoke-bridge-2-collide"), undefined, "authoritative key must evict bridge2");
+      assert.equal(bridge1Rejected, "Superseded by a newer turn");
+      assert.equal(bridge2Rejected, "Superseded by a newer turn");
+      assert.ok(getBridge("smoke-bridge-3-authoritative"));
+    } finally {
+      for (const id of [
+        "smoke-bridge-1-collide",
+        "smoke-bridge-2-collide",
+        "smoke-bridge-3-authoritative",
+      ]) {
+        const b = getBridge(id);
+        if (b) for (const call of b.pendingTools.values()) call.reject = () => {};
+        deleteBridge(id);
+      }
+    }
+  }
+
+  // ---- Id-first bridge routing: a request carrying a tool result must
+  // resolve the bridge that owns that tool id, even when another bridge
+  // co-owns the same (non-authoritative) conversationKey ----
+  {
+    const { putBridge, getBridge, deleteBridge, findBridgeByConversation } =
+      await import("../src/bridge-pool.ts");
+    const { conversationKeyFromMessages } = await import(
+      "../src/session-store.ts"
+    );
+
+    const fakeHandle = () => ({
+      stream: (async function* () {})(),
+      interrupt: async () => {},
+      close: () => {},
+      getPid: () => null,
+    });
+    const seedMessages = [{ role: "user", content: "route-collision seed message" }];
+    const routeKey = conversationKeyFromMessages(seedMessages);
+
+    let bridge1Touched = false;
+    const bridge1 = {
+      id: "smoke-route-bridge-1",
+      conversationKey: routeKey,
+      handle: fakeHandle(),
+      pendingTools: new Map([
+        [
+          "route_tool_a",
+          {
+            id: "route_tool_a",
+            name: "bash",
+            arguments: "{}",
+            resolve: () => {
+              bridge1Touched = true;
+            },
+            reject: () => {
+              bridge1Touched = true;
+            },
+          },
+        ],
+      ]),
+      seenAssistantUsageIds: new Set<string>(),
+      createdAt: Date.now(),
+    };
+    const bridge2 = {
+      id: "smoke-route-bridge-2",
+      conversationKey: routeKey,
+      handle: fakeHandle(),
+      pendingTools: new Map([
+        [
+          "route_tool_b",
+          {
+            id: "route_tool_b",
+            name: "bash",
+            arguments: "{}",
+            resolve: () => {},
+            reject: () => {},
+          },
+        ],
+      ]),
+      seenAssistantUsageIds: new Set<string>(),
+      createdAt: Date.now(),
+      continueStream: () =>
+        (async function* () {
+          yield {
+            type: "stream_event",
+            event: {
+              type: "content_block_delta",
+              delta: { type: "text_delta", text: "BRIDGE_2_RESUMED" },
+            },
+          };
+          yield { type: "result", is_error: false, usage: {} };
+        })(),
+    };
+    try {
+      // Coexist under the same non-authoritative key, exactly like the
+      // putBridge-collision case above.
+      putBridge(bridge1 as never, false);
+      putBridge(bridge2 as never, false);
+
+      const res = await fetch(`http://127.0.0.1:${port}/v1/chat/completions`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          model: "sonnet",
+          stream: false,
+          messages: [
+            ...seedMessages,
+            { role: "tool", tool_call_id: "route_tool_b", content: "result for B" },
+          ],
+        }),
+      });
+      assert.equal(res.status, 200);
+      const json = (await res.json()) as {
+        choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
+      };
+      assert.match(
+        String(json.choices?.[0]?.message?.content ?? ""),
+        /BRIDGE_2_RESUMED/,
+        "tool result for bridge #2 must resolve bridge #2, not bridge #1",
+      );
+      assert.equal(json.choices?.[0]?.finish_reason, "stop");
+      assert.equal(bridge1Touched, false, "bridge #1's unrelated pending tool must be untouched");
+      assert.ok(getBridge("smoke-route-bridge-1"), "bridge #1 must remain parked");
+      assert.equal(getBridge("smoke-route-bridge-1")?.pendingTools.size, 1);
+      assert.ok(
+        findBridgeByConversation(routeKey)?.id === "smoke-route-bridge-1" ||
+          findBridgeByConversation(routeKey)?.id === "smoke-route-bridge-2",
+      );
+    } finally {
+      for (const id of ["smoke-route-bridge-1", "smoke-route-bridge-2"]) {
+        const b = getBridge(id);
+        if (b) for (const call of b.pendingTools.values()) call.reject = () => {};
+        deleteBridge(id);
+      }
     }
   }
 
