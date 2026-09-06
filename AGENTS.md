@@ -41,3 +41,7 @@ Custom "type your own answer" auto-added — don't add "Other"
 
 ## Linear
 - linear.app URL / "check linear" → use `linear` CLI directly (see `linear-cli` skill), never ask user to paste ticket content
+
+## Communication
+- Assume every user msg is dictated → always check for dictation errors (missing words, wrong homophones, garbled grammar), correct from context before acting.
+- Unrecognized/ambiguous words likely dictation errors, not deliberate → infer intent from context; ask only if truly unrecoverable.
