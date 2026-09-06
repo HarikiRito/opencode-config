@@ -16,13 +16,6 @@
             "output": 384000
           }
         },
-        "deepseek-v4-flash": {
-          "name": "DS4 Old",
-          "limit": {
-            "context": 1000000,
-            "output": 384000
-          }
-        },
         "qwen3.8-max": {
           "name": "Qwen 3.8 Max",
           "limit": {
@@ -59,8 +52,6 @@
     "~/.config/opencode/AGENTS.md"
   ],
   "plugin": [
-    "./plugins/dictation-suffix.ts",
-    "./plugins/skills-as-plain-text.ts",
     "@openchamber/opencode-claude"
   ],
   "lsp": false,
