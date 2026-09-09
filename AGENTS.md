@@ -1,7 +1,13 @@
 ---
 Load memory first: `.ai/memory/MEMORY.md` + `~/.claude/projects/<current-project>/memory/MEMORY.md` (indexes only — load linked detail files as needed). <current-project> = claude project dir matching workspace.
 
-Be concise & compact always. Ask questions via question tool.
+Be concise & compact always. Ask questions via question tool — EXCEPT plan approvals and y/n prompts, which are plain text only.
+
+## Plan-First Flow (mandatory, main agent only)
+- Any mutation (edit/write/delete/commit/non-read-only cmd) → draft plan first, wait for approval
+- Approval prompt = plain text `Y/N` — never question tool
+- No impl until explicit `Y`
+- Read-only work exempt
 
 # Orchestrator Rules
 - No Edit/Write/Bash → `explore` (read code, grep/search, locate symbols, architecture, git status/log/diff, codegraph)
