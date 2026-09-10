@@ -114,6 +114,11 @@
         "--mcp"
       ],
       "enabled": true
+    },
+    "penpot": {
+      "type": "remote",
+      "url": "https://design.penpot.app/mcp/stream?userToken=eyJhbGciOiJBMjU2S1ciLCJlbmMiOiJBMjU2R0NNIn0.GdKzz1Dn2FocZz7deBNlF-e5qrnPYRHf5qSOtnGJB_1jWVV3zaUcFg.Bhu6-b0vqVVX06oS.-vTycUC1-lKOUk_UxZpPd_tp0taGFkvrKUuKPtKG5-6p_fD7sMrPcNuQd_P7d3LKQeNwdqVnKHvIro1CqqHLj3TrDfZfZNgXy6SCYhzg6NK1s9f7P4A20UxB7_IuRmqcGPct_fUN_DYH9j72P1B_fVIMhP5Fecq869jTjv5wsdN4P1HF2AcGqeKAKq10R1EYn6PWq5jIivK7.hw_XsmmkSod2UyUhDyafjA",
+      "enabled": false
     }
   }
 }

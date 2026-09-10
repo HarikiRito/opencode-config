@@ -19,7 +19,6 @@ Be concise & compact always. Ask questions via question tool — EXCEPT plan app
 - `build` = orchestrator only, enforced via opencode.json: Read on `*.md` only; Edit/Write/Bash/Grep/Glob/List/Webfetch denied
 - All non-.md work → delegate via `task`: `coding` (coding-heavy tasks + finishing commands), `general` (everything else), `code-reviewer` (review)
 - `plan` mode disabled — `build` drafts plans in chat (.md + subagent reports only), delegates writes to subagent
-- Main agent lacks vision + image understanding needed → `task` → `vision` agent. Pasted image w/o file path → include image data in prompt; vision saves to `.ai/files/` itself, then reads.
 
 ## Fallback (Spare Agent)
 - Subagent fails (any cause, incl. undetectable usage-limit exhaustion) → retry same role once (2 total)
