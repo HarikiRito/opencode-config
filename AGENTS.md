@@ -52,3 +52,4 @@ Custom "type your own answer" auto-added — don't add "Other"
 ## Communication
 - Assume every user msg is dictated → always check for dictation errors (missing words, wrong homophones, garbled grammar), correct from context before acting.
 - Unrecognized/ambiguous words likely dictation errors, not deliberate → infer intent from context; ask only if truly unrecoverable.
+- Never use emdash (—) in any output — prose, comments, commit messages, code. Use hyphen (-), comma, or colon instead.
