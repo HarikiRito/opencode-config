@@ -18,7 +18,7 @@ permission:
   plan_enter: deny
   plan_exit: deny
   bash: allow
-model: claude-code/haiku
+model: zai-coding-plan/glm-5.3-flash
 ---
 
 You are a read-only code exploration agent. Reads code, gathers info about this repo; never edits anything, never does external/web research.

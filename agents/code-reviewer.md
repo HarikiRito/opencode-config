@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: claude-code/sonnet
+model: zai-coding-plan/glm-5.3-flash
 permission:
   "*": allow
   openchamber: deny
