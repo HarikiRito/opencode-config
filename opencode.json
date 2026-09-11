@@ -9,27 +9,6 @@
         "apiKey": "sk-HHbW8DLytkZtrz9UlHmbX3lhsXqS3mhoWZnX5PBH1dulT9He"
       },
       "models": {
-        "deepseek-v4-flash-0731": {
-          "name": "DS4 Flash 0731",
-          "limit": {
-            "context": 1000000,
-            "output": 384000
-          }
-        },
-        "qwen3.8-max": {
-          "name": "Qwen 3.8 Max",
-          "limit": {
-            "context": 1000000,
-            "output": 384000
-          }
-        },
-        "qwen3.8-flash": {
-          "name": "Qwen3.8-flash",
-          "limit": {
-            "context": 1000000,
-            "output": 384000
-          }
-        },
         "ZHIPU/GLM-5.3": {
           "name": "GLM 5.3 Box",
           "limit": {
@@ -37,11 +16,11 @@
             "output": 128000
           }
         },
-        "kimi-k2.7-code": {
-          "name": "Kimi K2.7 Code",
+        "ds/deepseek-flash": {
+          "name": "DS Flash",
           "limit": {
-            "context": 256000,
-            "output": 8192
+            "context": 1000000,
+            "output": 128000
           }
         }
       }
