@@ -21,6 +21,22 @@
           "limit": {
             "context": 1000000,
             "output": 128000
+          },
+          "reasoning": true,
+          "attachment": true,
+          "variants": {
+            "low": {
+              "reasoningEffort": "low"
+            },
+            "medium": {
+              "disabled": true
+            },
+            "high": {
+              "reasoningEffort": "high"
+            },
+            "max": {
+              "reasoningEffort": "max"
+            }
           }
         }
       }
