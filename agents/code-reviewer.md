@@ -7,12 +7,15 @@ permission:
   openchamber_web: deny
   question: deny
 name: code-reviewer
-description: Use this agent when code has been written or modified and needs to be reviewed for compliance with CLAUDE.md rules and coding standards. This agent should be called proactively after any significant code changes, new feature implementations, or when other agents complete coding tasks.
+description: Use this agent when code has been written or modified and needs to
   be reviewed for compliance with CLAUDE.md rules and coding standards. This
   agent should be called proactively after any significant code changes, new
   feature implementations, or when other agents complete coding tasks. be
   reviewed for compliance with CLAUDE.md rules and coding standards. This agent
   should be called proactively after any significant code changes, new feature
+  implementations, or when other agents complete coding tasks. be reviewed for
+  compliance with CLAUDE.md rules and coding standards. This agent should be
+  called proactively after any significant code changes, new feature
   implementations, or when other agents complete coding tasks. be reviewed for
   compliance with CLAUDE.md rules and coding standards. This agent should be
   called proactively after any significant code changes, new feature
