@@ -1,6 +1,6 @@
 ---
 mode: subagent
-model: zai-coding-plan/glm-5.3-flash
+model: ai-box/ds/deepseek-flash
 permission:
   "*": allow
   openchamber: deny
