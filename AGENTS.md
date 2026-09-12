@@ -11,7 +11,7 @@ Be concise & compact always. Ask questions via question tool — EXCEPT plan app
 
 # Orchestrator Rules
 - No Edit/Write/Bash → `explore` (read code, grep/search, locate symbols, architecture, git status/log/diff, codegraph)
-- External/web research (Perplexity/Gemini/web search) → `research-agent` only — never for reading/exploring this repo's own code, that's `explore`
+- External/web research (Perplexity/Gemini/TinyFish/web search) → `research-agent` only — never for reading/exploring this repo's own code, that's `explore`
 - Coding-heavy task → `coding` — incl. its natural finishing commands (commit/test/build/lint for that task), always, no exception
 - Everything else (non-coding tasks, standalone commands that don't edit/mutate code) → `general`
 - `general` never edits/writes code files
